@@ -1,7 +1,10 @@
 var BookInstance = require('../models/bookinstance');
 var Book = require('../models/book');
+var async = require('async');
+
 const { body,validationResult } = require('express-validator/check');
 const {sanitizeBody } = require('express-validator/filter');
+const bookinstance = require('../models/bookinstance');
 
 // Display list of all BookInstances.
 exports.bookinstance_list = function (req, res, nest) {
@@ -92,21 +95,101 @@ exports.bookinstance_create_post = [
 ];
 
 // Display BookInstance delete form on GET.
-exports.bookinstance_delete_get = function (req, res) {
-    res.send('NOT IMPLEMENTED: BookInstance delete GET');
+exports.bookinstance_delete_get = function (req, res, next) {
+   
+    BookInstance.findById(req.params.id).exec(function(err, bookinstance){
+        if (err){ return next(err); }
+        if (bookinstance == null) {
+            res.redirect('/catalog/bookinstances');
+        }
+        res.render('bookinstance_delete', { title: 'Delete Copy', bookinstance: bookinstance });
+    });
+    
+    
 };
 
 // Handle BookInstance delete on POST.
-exports.bookinstance_delete_post = function (req, res) {
-    res.send('NOT IMPLEMENTED: BookInstance delete POST');
+exports.bookinstance_delete_post = function (req, res, next) {
+    BookInstance.findById(req.body.copyid).exec(function (err, bookinstance) {
+
+        BookInstance.findByIdAndDelete(req.body.copyid, function deleteCopy(err) {
+            if (err) {return next(err);}
+
+            //success
+            res.redirect('/catalog/bookinstances');
+        });
+        
+        
+    })
 };
 
 // Display BookInstance update form on GET.
-exports.bookinstance_update_get = function (req, res) {
-    res.send('NOT IMPLEMENTED: BookInstance update GET');
+exports.bookinstance_update_get = function (req, res, next) {
+
+    async.parallel({
+        bookinstance: function(callback){
+            BookInstance.findById(req.params.id).populate('book').exec(callback);
+        },
+        books: function (callback) {
+            Book.find(callback);
+        }
+    }, function (err, results) {
+        if (err) { return next(err); }
+        if (results.bookinstance==null){
+            var err = new Error('Copy not found');
+            err.status = 404;
+            return next(err);
+        }
+            res.render('bookinstance_form', { title: 'Update Copy', bookinstance: results.bookinstance, book_list: results.books, selected_book: results.bookinstance.book._id, statuses: BookInstance.schema.path('status').enumValues});
+    });
+    
 };
 
 // Handle bookinstance update on POST.
-exports.bookinstance_update_post = function (req, res) {
-    res.send('NOT IMPLEMENTED: BookInstance update POST');
-};
+exports.bookinstance_update_post = [
+
+
+    //validate fields
+    body('book', 'Book must be specified').trim().isLength({ min: 1 }),
+    body('imprint', 'Imprint must be specified').trim().isLength({ min: 1 }),
+    body('due_back', 'Invalid date').optional({ checkFalsy: true }).isISO8601(),
+
+    //sanitize fields
+    sanitizeBody('book').escape(),
+    sanitizeBody('imprint').escape(),
+    sanitizeBody('status').trim().escape(),
+    sanitizeBody('due_back').toDate(),
+
+    (req, res, next) => {
+
+        //extract validation errors
+        const errors = validationResult(req);
+
+        //create bookinstance object
+        var bookinstance = new BookInstance({
+            book: req.body.book,
+            imprint: req.body.imprint,
+            due_back: req.body.due_back,
+            status: req.body.status,
+            _id: req.params.id
+        });
+
+        if (!errors.isEmpty()){
+
+            Book.find({}, 'title').exec(function (err, books) {
+                if (err){ return next(err); }
+
+                res.render('bookinstance_form', { title: 'update Copy', books: books, bookinstance: bookinstance, selected_book: bookinstance.book._id, statuses: BookInstance.schema.path('status').enumValues, errors: errors.array() });
+            });
+            return;
+        }else {
+            //data valid update copy
+            BookInstance.findByIdAndUpdate(req.params.id, bookinstance, {}, function (err, thecopy){
+                if (err) { return next(err); }
+
+                res.redirect(thecopy.url);
+            });
+        }
+    }
+
+];

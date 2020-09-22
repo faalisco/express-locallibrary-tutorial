@@ -1,0 +1,27 @@
+extends layout
+
+block content
+    h1 #{title}: #{genre.name}
+
+    if books.length
+
+        p.text-danger #[strong Delete the following books before you can delete this genre.]
+        div(style='margin-left:20px;margin-top:20px')
+
+            h4 Books
+
+            each book in books
+                hr
+                p
+                    a(href=book.url) #{book.title}
+                p #{book.summary}
+    
+
+    else 
+        p Do you really want to delete this book?
+
+        form(method='POST' action='')
+            div.form-group
+                input#genreid.form-control(type='hidden' name='genreid' required='true' value=genre._id)
+
+            button.btn.btn-primary(type='submit') Delete

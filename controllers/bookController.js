@@ -150,7 +150,7 @@ exports.book_create_post = [
                         results.genres[i].checked='true';
                     }
                 }
-                res.render('book_form', {title: 'Create Book', authors:results.authors, genres:results.genres, book: book, errors:errors.array()});
+                res.render('book_form', {title: 'Create Book', authors:results.authors, genres:results.genres, book: book, errors:errors.array() });
             });
             return;
         }else{
@@ -234,7 +234,7 @@ exports.book_update_get = function (req, res, next) {
         },
     }, function (err, results) {
         if (err) { return next(err); }
-        if (results.book == null) { // No results.
+        if (results.book==null) { // No results.
             var err = new Error('Book not found');
             err.status = 404;
             return next(err);
@@ -243,8 +243,8 @@ exports.book_update_get = function (req, res, next) {
         // Mark our selected genres as checked.
         for (var all_g_iter = 0; all_g_iter < results.genres.length; all_g_iter++) {
             for (var book_g_iter = 0; book_g_iter < results.book.genre.length; book_g_iter++) {
-                if (results.genres[all_g_iter]._id.toString() == results.book.genre[book_g_iter]._id.toString()) {
-                    results.genres[all_g_iter].checked = 'true';
+                if (results.genres[all_g_iter]._id.toString()==results.book.genre[book_g_iter]._id.toString()) {
+                    results.genres[all_g_iter].checked='true';
                 }
             }
         }
@@ -259,10 +259,10 @@ exports.book_update_post = [
     // Convert the genre to an array
     (req, res, next) => {
         if (!(req.body.genre instanceof Array)) {
-            if (typeof req.body.genre === 'undefined')
-                req.body.genre = [];
+            if (typeof req.body.genre==='undefined')
+            req.body.genre=[];
             else
-                req.body.genre = new Array(req.body.genre);
+            req.body.genre=new Array(req.body.genre);
         }
         next();
     },
@@ -293,8 +293,8 @@ exports.book_update_post = [
                 author: req.body.author,
                 summary: req.body.summary,
                 isbn: req.body.isbn,
-                genre: (typeof req.body.genre === 'undefined') ? [] : req.body.genre,
-                _id: req.params.id //This is required, or a new ID will be assigned!
+                genre: (typeof req.body.genre==='undefined') ? [] : req.body.genre,
+                _id:req.params.id //This is required, or a new ID will be assigned!
             });
 
         if (!errors.isEmpty()) {
@@ -314,7 +314,7 @@ exports.book_update_post = [
                 // Mark our selected genres as checked.
                 for (let i = 0; i < results.genres.length; i++) {
                     if (book.genre.indexOf(results.genres[i]._id) > -1) {
-                        results.genres[i].checked = 'true';
+                        results.genres[i].checked='true';
                     }
                 }
                 res.render('book_form', { title: 'Update Book', authors: results.authors, genres: results.genres, book: book, errors: errors.array() });
